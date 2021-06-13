@@ -8,6 +8,8 @@ import requests
 
 from bs4 import BeautifulSoup
 
+LAST_TITLE = ''
+
 
 def crawl_link(link):
     return requests.get(link)
@@ -28,40 +30,42 @@ def find_next_page_url(html_soup):
 def save_original_article(article, title):
     file_path = get_file_path(title, 'original')
 
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(file_path, "a", encoding="utf-8") as f:
         f.write(article.prettify())
+        f.write('\n')
 
 
 def save_processed_article(text, title):
     file_path = get_file_path(title, 'processed')
 
-    with open(file_path, "w", encoding="utf-8") as f:
+    with open(file_path, "a", encoding="utf-8") as f:
         f.write(title + '\n')
         f.write(textwrap.fill(text, 80))
+        f.write('\n')
 
 
 def get_file_path(title, directory):
     filename = title.replace(' ', '_').replace('=', '_').replace('!', '').replace(',', '').lower()
     dir = directory + '/' if directory else ''
     path_name = './' + dir + filename + '.txt'
-    i = 1
-
-    while os.path.isfile(path_name):
-        path_name = './' + dir + filename + '_' + str(i) + '.txt'
-        i += 1
 
     return path_name
 
 
 def handle_article(article):
-    title = article.find('em', {'class': 'lemma'}).text
-
-    # TODO: remember last title, if no title exists, append to last title  example biene
-
+    try:
+        title = article.find('em', {'class': 'lemma'}).text
+        global LAST_TITLE
+        LAST_TITLE = title
+    except AttributeError:
+        title = LAST_TITLE
 
     save_original_article(article, title)
 
-    article.find('em', {'class': 'lemma'}).decompose()
+    try:
+        article.find('em', {'class': 'lemma'}).decompose()
+    except AttributeError:
+        pass
 
     for a in article.find_all('a'):
         a.decompose()
